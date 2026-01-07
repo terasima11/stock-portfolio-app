@@ -6,17 +6,33 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h2>株価運用実績（過去1年）</h2>
+  <h2>株価運用実績（過去1年・実際の投資金額ベース）</h2>
   <canvas id="portfolioChart" width="1200" height="600"></canvas>
 
   <script>
-  const selectedTickers = [
-    "1384.T", "1382.T", "1379.T", "1377.T", "1380.T",
-    "2593.T", "2226.T", "2910.T", "2923.T", "1381.T",
-    "4680.T", "2305.T", "9708.T", "6819.T", "2485.T",
-    "9602.T", "9697.T", "3635.T"
+  // 銘柄コードと購入金額
+  const portfolio = [
+    {code: "1384.T", name:"ホクリヨウ", amount:250000},
+    {code: "1382.T", name:"ホーブ", amount:230000},
+    {code: "1379.T", name:"ホクト", amount:260000},
+    {code: "1377.T", name:"サカタのタネ", amount:270000},
+    {code: "1380.T", name:"秋川牧園", amount:240000},
+    {code: "2593.T", name:"伊藤園", amount:270000},
+    {code: "2226.T", name:"湖池屋", amount:240000},
+    {code: "2910.T", name:"ロック・フィールド", amount:260000},
+    {code: "2923.T", name:"サトウ食品", amount:250000},
+    {code: "1381.T", name:"アクシーズ", amount:230000},
+    {code: "4680.T", name:"ラウンドワン", amount:240000},
+    {code: "2305.T", name:"スタジオアリス", amount:230000},
+    {code: "9708.T", name:"帝国ホテル", amount:270000},
+    {code: "6819.T", name:"伊豆シャボテンリゾート", amount:250000},
+    {code: "2485.T", name:"ティア", amount:260000},
+    {code: "9602.T", name:"東宝", amount:240000},
+    {code: "9697.T", name:"カプコン", amount:260000},
+    {code: "3635.T", name:"コーエーテクモHD", amount:230000}
   ];
 
+  // インデックス
   const indices = ["^N225", "^TOPX"]; 
 
   async function fetchStockData(symbol) {
@@ -50,7 +66,7 @@
   }
 
   async function drawChart() {
-    const symbols = [...selectedTickers, ...indices];
+    const symbols = [...portfolio.map(p => p.code), ...indices];
     const datasets = [];
     let labels = [];
 
@@ -60,23 +76,21 @@
 
       if(labels.length === 0) labels = stockData.labels;
 
-      // --- 運用実績計算 ---
-      const initialPrice = stockData.prices[0];
-      const initialInvestment = 10000; // 1銘柄1万円投資
-      const shares = initialInvestment / initialPrice;
+      let dataForChart = [];
 
-      // 日次資産価値
-      const portfolioValue = stockData.prices.map(p => shares * p);
-
-      // 指数は1日目を1にして正規化
-      let dataForChart = portfolioValue;
-      if(sym.startsWith("^")) {
+      // 銘柄の場合は購入金額ベースで運用資産計算
+      const portItem = portfolio.find(p => p.code === sym);
+      if(portItem){
+        const shares = portItem.amount / stockData.prices[0]; // 株数
+        dataForChart = stockData.prices.map(p => p * shares); // 資産価値推移
+      } else {
+        // 指数の場合は初日を1万円換算
         const first = stockData.prices[0];
-        dataForChart = stockData.prices.map(p => p / first * 10000); // 初期1万円換算
+        dataForChart = stockData.prices.map(p => p / first * 10000);
       }
 
       datasets.push({
-        label: stockData.symbol,
+        label: portItem ? portItem.name : sym,
         data: dataForChart,
         borderColor: getRandomColor(),
         fill: false,
@@ -92,7 +106,7 @@
         responsive: true,
         plugins: {
           legend: { position: 'bottom' },
-          title: { display: true, text: '過去1年の運用実績（1銘柄1万円投資換算）' }
+          title: { display: true, text: '過去1年の運用実績（購入金額ベース）' }
         },
         scales: {
           y: { beginAtZero: false, title: { display: true, text: '資産価値（円）' } }

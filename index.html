@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>株式ポートフォリオ比較</title>
+  <meta charset="UTF-8">
+  <title>株ポートフォリオ</title>
 </head>
 <body>
-  <h1>株式ポートフォリオ</h1>
+  <h1>株ポートフォリオ</h1>
 
-  <p>
-    銘柄名：
-    <input type="text" id="name">
-  </p>
+  <!-- 銘柄選択 -->
+  <label for="stockSelect">銘柄を選んでください（複数選択可）:</label><br>
+  <select id="stockSelect" multiple>
+    <option value="0">トヨタ自動車</option>
+    <option value="1">ソニー</option>
+    <option value="2">任天堂</option>
+  </select><br><br>
 
-  <p>
-    株価（円）：
-    <input type="number" id="price">
-  </p>
+  <!-- 投資金額入力 -->
+  <label for="amount">投資金額:</label>
+  <input type="number" id="amount" placeholder="円"><br><br>
 
-  <p>
-    株数：
-    <input type="number" id="shares">
-  </p>
+  <button id="calculate">計算</button>
 
-  <button onclick="calc()">計算</button>
+  <!-- 結果表示 -->
+  <div id="result"></div>
 
-  <p id="result"></p>
-
-  <script>
-    function calc() {
-      const price = Number(document.getElementById("price").value);
-      const shares = Number(document.getElementById("shares").value);
-      const total = price * shares;
-      document.getElementById("result").innerText =
-        "投資金額合計：" + total.toLocaleString() + " 円";
-    }
-  </script>
+  <!-- JavaScript読み込み -->
+  <script src="script.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
+
 
 

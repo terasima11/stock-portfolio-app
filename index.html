@@ -2,42 +2,42 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>株価運用実績比較</title>
+  <title>ポートフォリオ運用比較</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h2>株価運用実績（過去1年・実際の投資金額ベース）</h2>
+  <h2>過去1年の運用実績比較</h2>
   <canvas id="portfolioChart" width="1200" height="600"></canvas>
 
   <script>
-  // 銘柄コードと購入金額
+  // 指定銘柄と購入額
   const portfolio = [
-    {code: "1384.T", name:"ホクリヨウ", amount:250000},
-    {code: "1382.T", name:"ホーブ", amount:230000},
-    {code: "1379.T", name:"ホクト", amount:260000},
-    {code: "1377.T", name:"サカタのタネ", amount:270000},
-    {code: "1380.T", name:"秋川牧園", amount:240000},
-    {code: "2593.T", name:"伊藤園", amount:270000},
-    {code: "2226.T", name:"湖池屋", amount:240000},
-    {code: "2910.T", name:"ロック・フィールド", amount:260000},
-    {code: "2923.T", name:"サトウ食品", amount:250000},
-    {code: "1381.T", name:"アクシーズ", amount:230000},
-    {code: "4680.T", name:"ラウンドワン", amount:240000},
-    {code: "2305.T", name:"スタジオアリス", amount:230000},
-    {code: "9708.T", name:"帝国ホテル", amount:270000},
-    {code: "6819.T", name:"伊豆シャボテンリゾート", amount:250000},
-    {code: "2485.T", name:"ティア", amount:260000},
-    {code: "9602.T", name:"東宝", amount:240000},
-    {code: "9697.T", name:"カプコン", amount:260000},
-    {code: "3635.T", name:"コーエーテクモHD", amount:230000}
+    {code: "1384.T", amount:250000},
+    {code: "1382.T", amount:230000},
+    {code: "1379.T", amount:260000},
+    {code: "1377.T", amount:270000},
+    {code: "1380.T", amount:240000},
+    {code: "2593.T", amount:270000},
+    {code: "2226.T", amount:240000},
+    {code: "2910.T", amount:260000},
+    {code: "2923.T", amount:250000},
+    {code: "1381.T", amount:230000},
+    {code: "4680.T", amount:240000},
+    {code: "2305.T", amount:230000},
+    {code: "9708.T", amount:270000},
+    {code: "6819.T", amount:250000},
+    {code: "2485.T", amount:260000},
+    {code: "9602.T", amount:240000},
+    {code: "9697.T", amount:260000},
+    {code: "3635.T", amount:230000}
   ];
 
   // インデックス
-  const indices = ["^N225", "^TOPX"]; 
+  const indices = ["^N225", "^TOPX"];
 
   async function fetchStockData(symbol) {
     const endDate = Math.floor(Date.now() / 1000);
-    const startDate = endDate - 365*24*60*60; // 過去1年
+    const startDate = endDate - 365*24*60*60;
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${startDate}&period2=${endDate}&interval=1d`;
 
     try {
@@ -49,64 +49,66 @@
         const labels = timestamps.map(ts => new Date(ts*1000).toLocaleDateString());
         return {symbol, labels, prices};
       } else {
-        console.warn(symbol + "のデータ取得に失敗しました");
+        console.warn(symbol + "のデータ取得に失敗");
         return {symbol, labels: [], prices: []};
       }
     } catch(e) {
-      console.error(symbol + "の取得エラー:", e);
+      console.error(symbol + "取得エラー:", e);
       return {symbol, labels: [], prices: []};
     }
   }
 
-  function getRandomColor() {
-    const r = Math.floor(Math.random()*200);
-    const g = Math.floor(Math.random()*200);
-    const b = Math.floor(Math.random()*200);
-    return `rgb(${r},${g},${b})`;
-  }
-
   async function drawChart() {
-    const symbols = [...portfolio.map(p => p.code), ...indices];
-    const datasets = [];
     let labels = [];
+    let portfolioValue = []; // 総合ポートフォリオ
+    let topixValue = [];     // TOPIX
+    let n225Value = [];      // 日経225
 
-    for(const sym of symbols){
-      const stockData = await fetchStockData(sym);
-      if(stockData.prices.length === 0) continue;
-
-      if(labels.length === 0) labels = stockData.labels;
-
-      let dataForChart = [];
-
-      // 銘柄の場合は購入金額ベースで運用資産計算
-      const portItem = portfolio.find(p => p.code === sym);
-      if(portItem){
-        const shares = portItem.amount / stockData.prices[0]; // 株数
-        dataForChart = stockData.prices.map(p => p * shares); // 資産価値推移
-      } else {
-        // 指数の場合は初日を1万円換算
-        const first = stockData.prices[0];
-        dataForChart = stockData.prices.map(p => p / first * 10000);
-      }
-
-      datasets.push({
-        label: portItem ? portItem.name : sym,
-        data: dataForChart,
-        borderColor: getRandomColor(),
-        fill: false,
-        tension: 0.1
-      });
+    // 1. 指定銘柄の総合資産推移
+    let allPrices = [];
+    for(const p of portfolio){
+      const stock = await fetchStockData(p.code);
+      if(stock.prices.length === 0) continue;
+      if(labels.length === 0) labels = stock.labels;
+      const shares = p.amount / stock.prices[0];
+      const values = stock.prices.map(price => price * shares);
+      allPrices.push(values);
     }
 
+    // 日ごとの合計
+    portfolioValue = allPrices[0].map((_, i) =>
+      allPrices.reduce((sum, arr) => sum + arr[i], 0)
+    );
+
+    // 2. TOPIXと日経225に同額投資
+    const totalInvestment = portfolio.reduce((sum, p) => sum + p.amount, 0);
+
+    for(const idx of indices){
+      const stock = await fetchStockData(idx);
+      if(stock.prices.length === 0) continue;
+      const shares = totalInvestment / stock.prices[0];
+      const values = stock.prices.map(p => p * shares);
+      if(idx === "^TOPX") topixValue = values;
+      if(idx === "^N225") n225Value = values;
+    }
+
+    // チャート描画
     const ctx = document.getElementById('portfolioChart').getContext('2d');
     new Chart(ctx, {
       type: 'line',
-      data: { labels, datasets },
+      data: {
+        labels,
+        datasets: [
+          {label: "自分の20銘柄ポートフォリオ", data: portfolioValue, borderColor: "blue", fill:false},
+          {label: "TOPIX同額投資", data: topixValue, borderColor: "green", fill:false},
+          {label: "日経225同額投資", data: n225Value, borderColor: "red", fill:false},
+        ]
+      },
       options: {
         responsive: true,
         plugins: {
           legend: { position: 'bottom' },
-          title: { display: true, text: '過去1年の運用実績（購入金額ベース）' }
+          title: { display: true, text: '過去1年の運用実績比較（総資産ベース）' }
         },
         scales: {
           y: { beginAtZero: false, title: { display: true, text: '資産価値（円）' } }

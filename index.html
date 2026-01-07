@@ -1,34 +1,42 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>株ポートフォリオ</title>
-</head>
-<body>
-  <h1>株ポートフォリオ</h1>
+from pypfopt import EfficientFrontier, risk_models, expected_returns
 
-  <!-- 銘柄選択 -->
-  <label for="stockSelect">銘柄を選んでください（複数選択可）:</label><br>
-  <select id="stockSelect" multiple>
-    <option value="0">トヨタ自動車</option>
-    <option value="1">ソニー</option>
-    <option value="2">任天堂</option>
-  </select><br><br>
+# 平均リターンと共分散行列
+mu = expected_returns.mean_historical_return(fund_prices, frequency=12)  # 年率換算
+S = risk_models.sample_cov(fund_prices, frequency=12)
 
-  <!-- 投資金額入力 -->
-  <label for="amount">投資金額:</label>
-  <input type="number" id="amount" placeholder="円"><br><br>
+# 最適化
+ef = EfficientFrontier(mu, S, weight_bounds=(MIN_WEIGHT, 1.0))
+raw_weights = ef.max_sharpe()  # シャープレシオ最大化
+cleaned_weights = ef.clean_weights()
+print("最適化ウェイト:", cleaned_weights)
+# ポートフォリオ月次リターン
+portfolio_returns = (fund_returns * pd.Series(cleaned_weights)).sum(axis=1)
 
-  <button id="calculate">計算</button>
+# 累積リターン
+portfolio_cum = (1 + portfolio_returns).cumprod()
+bench_cum = (1 + bench_returns).cumprod()  # ベンチマークも同様
+import matplotlib.pyplot as plt
+import japanize_matplotlib
 
-  <!-- 結果表示 -->
-  <div id="result"></div>
+plt.figure(figsize=(10,6))
+plt.plot(portfolio_cum, label="最適化ポートフォリオ", linewidth=2)
+for col in bench_cum.columns:
+    plt.plot(bench_cum[col], label=col)
+plt.title("ポートフォリオ vs ベンチマーク（累積リターン）")
+plt.xlabel("年月")
+plt.ylabel("累積リターン")
+plt.legend()
+plt.grid(True)
+plt.show()
+output_data = {
+    "weights": cleaned_weights,
+    "portfolio_cum": portfolio_cum.to_dict()
+}
 
-  <!-- JavaScript読み込み -->
-  <script src="script.js"></script>
-  <script src="main.js"></script>
-</body>
-</html>
+output_filepath = os.path.join(DATA_FOLDER_PATH, 'output.json')
+with open(output_filepath, 'w', encoding='utf-8') as f:
+    json.dump(output_data, f, ensure_ascii=False, indent=2)
 
+print(f"結果を保存しました: {output_filepath}")
 
 

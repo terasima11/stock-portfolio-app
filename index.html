@@ -1,53 +1,101 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// 上場企業4000社の銘柄コード配列（例として抜粋）
-const allTickers = [
-  "7203.T", "9433.T", "9984.T", "6758.T", "6861.T", "4502.T", "6971.T", "7974.T", "8058.T", "8306.T",
-  // 実際にはここに4000社分を入れる
-];
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>株価ポートフォリオ比較</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>株価比較チャート（過去1年）</h2>
+  <canvas id="portfolioChart" width="1200" height="600"></canvas>
 
-// インデックス
-const indices = ["^N225", "^TOPX"];
+  <script>
+  // 上場企業4000社の銘柄コード配列（例として抜粋）
+  const allTickers = [
+    "7203.T", "9433.T", "9984.T", "6758.T", "6861.T", "4502.T", "6971.T", "7974.T", "8058.T", "8306.T",
+    // 実際にはここに4000社分を入れる
+  ];
 
-// チャート用関数
-async function fetchStockData(symbol) {
-  const endDate = Math.floor(Date.now() / 1000);
-  const startDate = endDate - 30*24*60*60; // 過去30日
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${startDate}&period2=${endDate}&interval=1d`;
-  
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data.chart && data.chart.result){
-      const timestamps = data.chart.result[0].timestamp;
-      const prices = data.chart.result[0].indicators.quote[0].close;
-      const labels = timestamps.map(ts => new Date(ts*1000).toLocaleDateString());
-      return {symbol, labels, prices};
-    } else {
-      console.warn(symbol + "のデータ取得に失敗しました");
+  // インデックス
+  const indices = ["^N225", "^TOPX"];
+
+  // 株価データ取得関数
+  async function fetchStockData(symbol) {
+    const endDate = Math.floor(Date.now() / 1000);         // 今日
+    const startDate = endDate - 365*24*60*60;             // 過去1年
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${startDate}&period2=${endDate}&interval=1d`;
+    
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if(data.chart && data.chart.result){
+        const timestamps = data.chart.result[0].timestamp;
+        const prices = data.chart.result[0].indicators.quote[0].close;
+        const labels = timestamps.map(ts => new Date(ts*1000).toLocaleDateString());
+        return {symbol, labels, prices};
+      } else {
+        console.warn(symbol + "のデータ取得に失敗しました");
+        return {symbol, labels: [], prices: []};
+      }
+    } catch(e) {
+      console.error(symbol + "の取得エラー:", e);
       return {symbol, labels: [], prices: []};
     }
-  } catch(e) {
-    console.error(symbol + "の取得エラー:", e);
-    return {symbol, labels: [], prices: []};
   }
-}
 
-// ランダムカラー生成
-function getRandomColor() {
-  const r = Math.floor(Math.random()*200);
-  const g = Math.floor(Math.random()*200);
-  const b = Math.floor(Math.random()*200);
-  return `rgb(${r},${g},${b})`;
-}
+  // ランダムカラー生成
+  function getRandomColor() {
+    const r = Math.floor(Math.random()*200);
+    const g = Math.floor(Math.random()*200);
+    const b = Math.floor(Math.random()*200);
+    return `rgb(${r},${g},${b})`;
+  }
 
-// 選択銘柄をランダムに20社選ぶ
-function pickRandomTickers(n) {
-  const shuffled = [...allTickers].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, n);
-}
+  // ランダムに20社選ぶ
+  function pickRandomTickers(n) {
+    const shuffled = [...allTickers].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, n);
+  }
 
-// チャート描画
-async function drawChart() {
-  const selectedTickers = pickRandomTickers(20); // ランダム
+  // チャート描画
+  async function drawChart() {
+    const selectedTickers = pickRandomTickers(20);   // ランダム20社
+    const symbols = [...selectedTickers, ...indices]; // 指数も追加
 
+    const datasets = [];
+    let labels = [];
+
+    for(const sym of symbols){
+      const stockData = await fetchStockData(sym);
+      if(labels.length === 0) labels = stockData.labels; // 最初の銘柄のラベルを使用
+      datasets.push({
+        label: stockData.symbol,
+        data: stockData.prices,
+        borderColor: getRandomColor(),
+        fill: false,
+        tension: 0.1
+      });
+    }
+
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          title: { display: true, text: '自分の銘柄と指数の株価比較（過去1年）' }
+        },
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  }
+
+  // 実行
+  drawChart();
+  </script>
+</body>
+</html>

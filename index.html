@@ -2,10 +2,39 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Stock Portfolio App</title>
+  <title>株式ポートフォリオ比較</title>
 </head>
 <body>
-  <h1>表示できました！</h1>
-  <p>GitHub Pages 成功です。</p>
+  <h1>株式ポートフォリオ</h1>
+
+  <p>
+    銘柄名：
+    <input type="text" id="name">
+  </p>
+
+  <p>
+    株価（円）：
+    <input type="number" id="price">
+  </p>
+
+  <p>
+    株数：
+    <input type="number" id="shares">
+  </p>
+
+  <button onclick="calc()">計算</button>
+
+  <p id="result"></p>
+
+  <script>
+    function calc() {
+      const price = Number(document.getElementById("price").value);
+      const shares = Number(document.getElementById("shares").value);
+      const total = price * shares;
+      document.getElementById("result").innerText =
+        "投資金額合計：" + total.toLocaleString() + " 円";
+    }
+  </script>
 </body>
 </html>
+
